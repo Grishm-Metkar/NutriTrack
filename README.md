@@ -2,6 +2,8 @@
 
 A web-based nutrition tracking application built with Python Flask.
 
+🔗 **Live Demo:** [https://nutritrack-1vy4.onrender.com](https://nutritrack-1vy4.onrender.com)
+
 ## Features
 - User Registration and Login
 - Browse Food Database
@@ -16,16 +18,24 @@ A web-based nutrition tracking application built with Python Flask.
 - Frontend: HTML, CSS, Tailwind CSS
 - Security: Werkzeug
 
-## How to Run
 
-1. Install dependencies
+
+## 🚀 How to Run Locally
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Grishm-Metkar/NutriTrack.git
+   cd NutriTrack
+
+2. Install dependencies
 pip install -r requirements.txt
 
-2. Run the app
+3. Run the app
 python app.py
 
-3. Open browser and go to
+4. Open browser and go to
 http://localhost:5000
+
 
 ## Author
 Grishm Metkar

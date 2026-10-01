@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - NutriTrack{% endblock %}
+{% block content %}
+
+<div class="max-w-6xl mx-auto px-4 py-10">
+
+  <!-- Welcome Banner -->
+  <div class="bg-gradient-to-r from-emerald-500 to-emerald-700 rounded-2xl p-8 text-white mb-8 relative overflow-hidden">
+    <div class="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+    <div class="absolute right-16 bottom-0 w-32 h-32 bg-white/5 rounded-full translate-y-12"></div>
+    <div class="relative">
+      <p class="text-emerald-200 text-sm font-semibold mb-1">Welcome back</p>
+      <h1 class="text-3xl font-extrabold mb-1">Hello, {{ session.username }}!</h1>
+      <p class="text-emerald-100 text-sm">Today is {{ today }}</p>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-8">
+
+    <!-- LEFT COLUMN: Log food + Today's meals -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Log Food Form -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center gap-3">
+          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </div>
+          <h2 class="text-white font-bold text-lg">Log a Meal</h2>
+        </div>
+        <form method="POST" action="/log-food" class="p-6">
+          <div class="grid sm:grid-cols-3 gap-3 mb-3">
+            <div class="sm:col-span-1">
+              <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Food</label>
+              <select name="food_id" data-offline-foods required
+                class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white">
+                <option value="">Select food...</option>
+                {% for food in all_foods %}
+                <option value="{{ food['id'] }}">{{ food['name'] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Amount</label>
+              <div class="relative">
+                <input type="number" name="grams" min="1" max="2000" step="1" placeholder="100" required
+                  class="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"/>
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">g</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Meal</label>
+              <select name="meal_type"
+                class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white">
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Snack" selected>Snack</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">
+            Add to Today's Log
+          </button>
+          <p id="offline-log-status" class="text-xs text-gray-500 mt-2" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <!-- Today's Food Log -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center">
+          <h2 class="font-bold text-gray-900 text-lg">Today's Food Log</h2>
+          <span class="text-xs text-gray-400 font-medium">{{ logs|length }} entr{% if logs|length == 1 %}y{% else %}ies{% endif %}</span>
+        </div>
+
+        {% if logs %}
+          {% set meal_order = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] %}
+          {% set meal_colors = {'Breakfast': 'bg-orange-100 text-orange-700', 'Lunch': 'bg-blue-100 text-blue-700', 'Dinner': 'bg-purple-100 text-purple-700', 'Snack': 'bg-gray-100 text-gray-600'} %}
+
+          <div class="divide-y divide-gray-50">
+            {% for log in logs %}
+            <div class="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors group">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full w-20 text-center flex-shrink-0
+                {% if log['meal_type'] == 'Breakfast' %}bg-orange-100 text-orange-700
+                {% elif log['meal_type'] == 'Lunch' %}bg-blue-100 text-blue-700
+                {% elif log['meal_type'] == 'Dinner' %}bg-purple-100 text-purple-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ log['meal_type'] }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-gray-900 text-sm">{{ log['name'] }}</div>
+                <div class="text-xs text-gray-400">{{ log['grams'] }}g</div>
+              </div>
+              <div class="flex items-center gap-4 text-xs font-medium flex-shrink-0">
+                <span class="text-emerald-600 font-bold">{{ (log['calories'] * log['grams'] / 100)|round(0)|int }} kcal</span>
+                <span class="text-blue-500 hidden sm:inline">P: {{ (log['protein'] * log['grams'] / 100)|round(1) }}g</span>
+                <span class="text-orange-500 hidden sm:inline">C: {{ (log['carbs'] * log['grams'] / 100)|round(1) }}g</span>
+                <span class="text-yellow-600 hidden sm:inline">F: {{ (log['fats'] * log['grams'] / 100)|round(1) }}g</span>
+              </div>
+              <form method="POST" action="/log-food/delete/{{ log['id'] }}" class="flex-shrink-0">
+                <button type="submit" class="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50" title="Remove">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Totals row -->
+          <div class="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-gray-600">Daily Total</span>
+              <div class="flex gap-4 text-sm font-bold">
+                <span class="text-emerald-600">{{ totals.calories }} kcal</span>
+                <span class="text-blue-500">P: {{ totals.protein }}g</span>
+                <span class="text-orange-500">C: {{ totals.carbs }}g</span>
+                <span class="text-yellow-600">F: {{ totals.fats }}g</span>
+              </div>
+            </div>
+          </div>
+
+        {% else %}
+          <div class="py-12 text-center">
+            <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <p class="text-gray-400 font-medium">No meals logged today yet</p>
+            <p class="text-gray-300 text-sm mt-1">Use the form above to add your first meal</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Totals + Quick Actions -->
+    <div class="space-y-6">
+
+      <!-- Daily Nutrition Summary -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="font-bold text-gray-900 mb-4">Today's Nutrition</h3>
+
+        <!-- Calorie ring / goal -->
+        {% set goal_pct = [totals.calories / calorie_goal * 100, 100]|min|int %}
+        {% set remaining = calorie_goal - totals.calories %}
+        <div class="text-center mb-2">
+          <div class="text-5xl font-extrabold {% if totals.calories > calorie_goal %}text-red-500{% else %}text-emerald-500{% endif %}">
+            {{ totals.calories }}
+          </div>
+          <div class="text-gray-400 text-sm mt-1">of <strong class="text-gray-600">{{ calorie_goal }}</strong> kcal goal</div>
+        </div>
+
+        <!-- Calorie progress bar -->
+        <div class="mb-1">
+          <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-3 rounded-full transition-all {% if totals.calories > calorie_goal %}bg-red-400{% elif goal_pct > 80 %}bg-yellow-400{% else %}bg-emerald-500{% endif %}"
+              style="width: {{ goal_pct }}%"></div>
+          </div>
+        </div>
+        <p class="text-xs text-center mb-4
+          {% if remaining < 0 %}text-red-500 font-semibold{% else %}text-gray-400{% endif %}">
+          {% if remaining >= 0 %}{{ remaining|int }} kcal remaining{% else %}{{ (remaining * -1)|int }} kcal over goal{% endif %}
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600 font-medium">Protein</span>
+              <span class="font-bold text-blue-600">{{ totals.protein }}g</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full">
+              <div class="h-2 bg-blue-500 rounded-full transition-all" style="width: {{ [totals.protein / 1.5, 100]|min }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600 font-medium">Carbs</span>
+              <span class="font-bold text-orange-500">{{ totals.carbs }}g</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full">
+              <div class="h-2 bg-orange-400 rounded-full transition-all" style="width: {{ [totals.carbs / 3, 100]|min }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600 font-medium">Fats</span>
+              <span class="font-bold text-yellow-600">{{ totals.fats }}g</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full">
+              <div class="h-2 bg-yellow-400 rounded-full transition-all" style="width: {{ [totals.fats / 0.7, 100]|min }}%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Set goal form -->
+        <form method="POST" action="/set-goal" class="mt-5 pt-4 border-t border-gray-100 flex gap-2">
+          <input type="number" name="calorie_goal" value="{{ calorie_goal }}" min="500" max="10000" step="50"
+            class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"/>
+          <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-2 rounded-xl text-sm transition-colors whitespace-nowrap">
+            Set Goal
+          </button>
+        </form>
+        <p class="text-xs text-gray-400 mt-1.5 text-center">Daily calorie target (kcal)</p>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <h3 class="font-bold text-gray-900 mb-3">Quick Links</h3>
+        <div class="space-y-2">
+          <a href="/foods" class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 transition-colors group">
+            <div class="w-8 h-8 bg-emerald-100 group-hover:bg-emerald-500 rounded-lg flex items-center justify-center transition-colors">
+              <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+              </svg>
+            </div>
+            <span class="text-sm font-semibold text-gray-700 group-hover:text-emerald-700">Browse Foods</span>
+          </a>
+          <a href="/calculators" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 transition-colors group">
+            <div class="w-8 h-8 bg-blue-100 group-hover:bg-blue-500 rounded-lg flex items-center justify-center transition-colors">
+              <svg class="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-5.586a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 0011.586 3H4a2 2 0 00-2 2v13a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <span class="text-sm font-semibold text-gray-700 group-hover:text-blue-700">Calculators</span>
+          </a>
+          <a href="/manage-foods" class="flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 transition-colors group">
+            <div class="w-8 h-8 bg-orange-100 group-hover:bg-orange-500 rounded-lg flex items-center justify-center transition-colors">
+              <svg class="w-4 h-4 text-orange-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </div>
+            <span class="text-sm font-semibold text-gray-700 group-hover:text-orange-700">Manage Foods</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+          <div class="text-2xl font-extrabold text-emerald-500">{{ total_foods }}</div>
+          <div class="text-gray-400 text-xs mt-0.5">Foods</div>
+        </div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+          <div class="text-2xl font-extrabold text-blue-500">{{ logs|length }}</div>
+          <div class="text-gray-400 text-xs mt-0.5">Logged Today</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

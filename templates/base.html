@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#065f46" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+  <title>{% block title %}NutriTrack{% endblock %}</title>
+  <script defer src="{{ url_for('static', filename='offline-logging.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='reminders.js') }}"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            emerald: {
+              50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0',
+              300: '#6ee7b7', 400: '#34d399', 500: '#10b981',
+              600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .gradient-hero { background: linear-gradient(135deg, #064e3b 0%, #10b981 50%, #34d399 100%); }
+    .card-hover { transition: all 0.25s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(16,185,129,0.15); }
+    .nav-link { transition: color 0.2s, border-color 0.2s; }
+    .macro-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans"
+      data-user-id="{{ session.get('user_id', '') }}"
+      data-offline-cleanup-user-id="{{ session.get('offline_cleanup_user_id', '') }}"
+      data-reminder-enabled="{{ session.get('reminder_enabled', 0) }}"
+      data-reminder-time="{{ session.get('reminder_time', '20:00') }}">
+
+<!-- Navbar -->
+<nav class="bg-gray-900 shadow-lg sticky top-0 z-50 border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <a href="/" class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-sm shadow-emerald-900">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-white">Nutri<span class="text-emerald-400">Track</span></span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <div class="hidden md:flex items-center gap-1">
+        <a href="/" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Home</a>
+        <a href="/foods" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Browse Foods</a>
+        <a href="/calculators" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Calculators</a>
+        {% if session.get('user_id') %}
+          <a href="/dashboard" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Dashboard</a>
+          <a href="/history" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">History</a>
+          <a href="/meal-plan" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Meal Plan</a>
+          <a href="/recipes" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Recipes</a>
+          <a href="/manage-foods" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Manage Foods</a>
+          <a href="/profile" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Profile</a>
+          <a href="/logout" class="ml-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white font-medium px-4 py-2 rounded-lg transition-all border border-gray-700">Logout</a>
+        {% else %}
+          <a href="/login" class="nav-link text-gray-300 hover:text-white hover:bg-gray-800 font-medium px-3 py-2 rounded-lg transition-all">Login</a>
+          <a href="/register" class="ml-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-sm shadow-emerald-900">Register</a>
+        {% endif %}
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden pb-4 pt-2 space-y-1 border-t border-gray-800">
+      <a href="/" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Home</a>
+      <a href="/foods" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Browse Foods</a>
+      <a href="/calculators" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Calculators</a>
+      {% if session.get('user_id') %}
+        <a href="/dashboard" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Dashboard</a>
+        <a href="/history" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">History</a>
+        <a href="/meal-plan" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Meal Plan</a>
+        <a href="/recipes" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Recipes</a>
+        <a href="/manage-foods" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Manage Foods</a>
+        <a href="/profile" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Profile</a>
+        <a href="/logout" class="block px-3 py-2 rounded-lg text-red-400 hover:bg-gray-800 font-medium transition-colors">Logout</a>
+      {% else %}
+        <a href="/login" class="block px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white font-medium transition-colors">Login</a>
+        <a href="/register" class="block mt-1 px-3 py-2 rounded-lg bg-emerald-500 text-white font-semibold text-center">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 pt-4 space-y-2">
+      {% for category, message in messages %}
+        <div class="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm
+          {% if category == 'success' %}bg-emerald-50 text-emerald-800 border border-emerald-200
+          {% elif category == 'danger' %}bg-red-50 text-red-800 border border-red-200
+          {% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200
+          {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Main content -->
+{% block content %}{% endblock %}
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-gray-400 mt-16 pt-10 pb-6">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col md:flex-row justify-between items-center gap-6 pb-6 border-b border-gray-800">
+      <!-- Logo -->
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <span class="text-white font-bold">Nutri<span class="text-emerald-400">Track</span></span>
+      </div>
+      <!-- Nav links -->
+      <div class="flex gap-5 text-sm">
+        <a href="/foods" class="hover:text-emerald-400 transition-colors">Browse Foods</a>
+        <a href="/calculators" class="hover:text-emerald-400 transition-colors">Calculators</a>
+        <a href="/register" class="hover:text-emerald-400 transition-colors">Get Started</a>
+      </div>
+    </div>
+
+    <!-- Bottom row -->
+    <div class="flex flex-col md:flex-row justify-between items-center gap-4 pt-5">
+      <p class="text-sm">Track your nutrition, fuel your goals. &copy; 2024 NutriTrack</p>
+
+      <!-- Contact links -->
+      <div class="flex items-center gap-5 text-sm">
+        <!-- Gmail -->
+        <a href="mailto:grishmmetkar21@gmail.com" class="flex items-center gap-2 hover:text-emerald-400 transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.910 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+          </svg>
+          grishmmetkar21@gmail.com
+        </a>
+
+        <!-- GitHub -->
+        <a href="https://github.com/Grishm-Metkar" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 hover:text-emerald-400 transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+          </svg>
+          Grishm-Metkar
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

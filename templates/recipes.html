@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Recipe Ideas — NutriTrack{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-10">
+  <header class="mb-8">
+    <p class="text-sm font-semibold uppercase tracking-wide text-emerald-600">Personalized ideas</p>
+    <h1 class="text-4xl font-extrabold text-gray-900 mt-1">Recipe Suggestions</h1>
+    <p class="text-gray-500 mt-2">Suggestions are ranked by how they fit your remaining calorie goal today.</p>
+  </header>
+
+  <section class="rounded-2xl bg-emerald-800 text-white p-6 mb-8">
+    <div class="grid sm:grid-cols-3 gap-5">
+      <div><p class="text-xs uppercase tracking-wide text-emerald-200">Daily target</p><p class="text-2xl font-bold mt-1">{{ calorie_goal|int }} kcal</p></div>
+      <div><p class="text-xs uppercase tracking-wide text-emerald-200">Logged today</p><p class="text-2xl font-bold mt-1">{{ consumed_calories|int }} kcal</p></div>
+      <div><p class="text-xs uppercase tracking-wide text-emerald-200">Remaining</p><p class="text-2xl font-bold mt-1">{{ remaining_calories|int }} kcal</p></div>
+    </div>
+  </section>
+
+  {% if recipes %}
+  <div class="grid md:grid-cols-2 gap-5">
+    {% for recipe in recipes %}
+    <article class="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 flex flex-col">
+      <div class="flex justify-between items-start gap-4">
+        <div>
+          <span class="inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700">{{ recipe.meal_type }}</span>
+          <h2 class="text-xl font-bold text-gray-900 mt-3">{{ recipe.name }}</h2>
+          <p class="text-sm text-gray-500 mt-1">{{ recipe.description }}</p>
+        </div>
+        <div class="text-right shrink-0">
+          <p class="text-2xl font-extrabold {% if recipe.fits_remaining %}text-emerald-600{% else %}text-gray-700{% endif %}">{{ recipe.calories|int }}</p>
+          <p class="text-xs text-gray-400">kcal per recipe</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 my-5 text-center">
+        <div class="rounded-lg bg-blue-50 py-2"><strong class="block text-blue-700">{{ recipe.protein|int }}g</strong><span class="text-xs text-gray-500">Protein</span></div>
+        <div class="rounded-lg bg-orange-50 py-2"><strong class="block text-orange-700">{{ recipe.carbs|int }}g</strong><span class="text-xs text-gray-500">Carbs</span></div>
+        <div class="rounded-lg bg-yellow-50 py-2"><strong class="block text-yellow-700">{{ recipe.fats|int }}g</strong><span class="text-xs text-gray-500">Fat</span></div>
+      </div>
+
+      <div class="mb-5">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Ingredients</h3>
+        <ul class="space-y-1">
+          {% for ingredient in recipe.ingredients %}
+          <li class="flex justify-between gap-3 text-sm text-gray-700"><span>{{ ingredient.name }}</span><span class="text-gray-500">{{ ingredient.grams|round(0)|int }}g</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="mt-auto pt-4 border-t border-gray-100">
+        {% if recipe.fits_remaining %}
+        <p class="text-xs font-semibold text-emerald-700 mb-3">Fits within your remaining calorie goal</p>
+        {% else %}
+        <p class="text-xs font-semibold text-gray-500 mb-3">Closest available option; exceeds remaining calories</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('add_recipe_to_meal_plan', recipe_id=recipe.id) }}" class="flex gap-2">
+          <label class="sr-only" for="recipe-date-{{ recipe.id }}">Plan date</label>
+          <input id="recipe-date-{{ recipe.id }}" type="date" name="planned_date" value="{{ today }}" required class="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm">
+          <button type="submit" class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 text-sm">Add to plan</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="rounded-2xl border border-gray-100 bg-white p-8 text-center">
+    <h2 class="font-bold text-gray-800">No recipe suggestions are available</h2>
+    <p class="text-sm text-gray-500 mt-2">Add the included foods back to your food database to restore the starter recipes.</p>
+  </div>
+  {% endif %}
+  <p class="text-xs text-gray-400 mt-6">Nutrition values are estimates based on foods in your database. Suggestions are for general tracking and are not medical advice.</p>
+</div>
+{% endblock %}

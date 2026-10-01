@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Calculators - NutriTrack{% endblock %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto px-4 py-10">
+  <div class="mb-8">
+    <h1 class="text-4xl font-extrabold text-gray-900">Calculators</h1>
+    <p class="text-gray-500 mt-2">Tools to help you understand your nutrition and health</p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-8">
+
+    <!-- Nutrition Calculator -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-5.586a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 0011.586 3H4a2 2 0 00-2 2v13a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-white font-bold text-lg">Nutrition Calculator</h2>
+            <p class="text-emerald-100 text-xs">Calculate macros for any serving size</p>
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="/calculators" class="p-6 space-y-4">
+        <input type="hidden" name="calc_type" value="nutrition" />
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Select Food</label>
+          <select name="food_id" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-gray-800" required>
+            <option value="">-- Choose a food --</option>
+            {% for food in foods %}
+              <option value="{{ food['id'] }}"
+                {% if nutrition_result and nutrition_result.food['id'] == food['id'] %}selected
+                {% elif not nutrition_result and selected_food_id and selected_food_id == food['id'] %}selected{% endif %}>
+                {{ food['name'] }} ({{ food['calories']|int }} kcal/100g)
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Amount (grams)</label>
+          <div class="relative">
+            <input
+              type="number" name="grams" min="1" max="2000" step="1"
+              value="{{ nutrition_result.grams if nutrition_result else '' }}"
+              placeholder="Enter grams (e.g. 150)"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              required
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">g</span>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-colors">
+          Calculate Nutrition
+        </button>
+      </form>
+
+      {% if nutrition_result %}
+      <div class="mx-6 mb-6 bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-gray-900">{{ nutrition_result.food['name'] }}</h3>
+          <span class="text-sm text-gray-500">{{ nutrition_result.grams }}g serving</span>
+        </div>
+        <div class="text-center mb-4">
+          <div class="text-4xl font-extrabold text-emerald-500">{{ nutrition_result.calories }}</div>
+          <div class="text-gray-500 text-sm">Calories</div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-white rounded-xl p-3 text-center shadow-sm">
+            <div class="text-xl font-bold text-blue-600">{{ nutrition_result.protein }}g</div>
+            <div class="text-xs text-gray-400 mt-0.5">Protein</div>
+          </div>
+          <div class="bg-white rounded-xl p-3 text-center shadow-sm">
+            <div class="text-xl font-bold text-orange-500">{{ nutrition_result.carbs }}g</div>
+            <div class="text-xs text-gray-400 mt-0.5">Carbs</div>
+          </div>
+          <div class="bg-white rounded-xl p-3 text-center shadow-sm">
+            <div class="text-xl font-bold text-yellow-600">{{ nutrition_result.fats }}g</div>
+            <div class="text-xs text-gray-400 mt-0.5">Fats</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- BMI Calculator -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-white font-bold text-lg">BMI Calculator</h2>
+            <p class="text-purple-100 text-xs">Body Mass Index assessment</p>
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="/calculators" class="p-6 space-y-4">
+        <input type="hidden" name="calc_type" value="bmi" />
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Height</label>
+          <div class="relative">
+            <input
+              type="number" name="height" min="50" max="250" step="0.1"
+              value="{{ bmi_result.height if bmi_result else '' }}"
+              placeholder="Enter height (e.g. 170)"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">cm</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Weight</label>
+          <div class="relative">
+            <input
+              type="number" name="weight" min="1" max="500" step="0.1"
+              value="{{ bmi_result.weight if bmi_result else '' }}"
+              placeholder="Enter weight (e.g. 70)"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2.5 pr-12 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">kg</span>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-xl transition-colors">
+          Calculate BMI
+        </button>
+      </form>
+
+      {% if bmi_result %}
+      <div class="mx-6 mb-6 bg-purple-50 rounded-2xl p-5 border border-purple-100">
+        <div class="text-center mb-5">
+          <div class="text-5xl font-extrabold {{ bmi_result.color }}">{{ bmi_result.bmi }}</div>
+          <div class="text-gray-500 text-sm mt-1">Your BMI</div>
+          <div class="mt-2 inline-block px-4 py-1 rounded-full text-sm font-semibold
+            {% if bmi_result.category == 'Normal Weight' %}bg-emerald-100 text-emerald-700
+            {% elif bmi_result.category == 'Underweight' %}bg-blue-100 text-blue-700
+            {% elif bmi_result.category == 'Overweight' %}bg-yellow-100 text-yellow-700
+            {% else %}bg-red-100 text-red-700{% endif %}">
+            {{ bmi_result.category }}
+          </div>
+        </div>
+        <!-- BMI Scale -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Underweight</span><span>Normal</span><span>Overweight</span><span>Obese</span>
+          </div>
+          <div class="h-3 rounded-full bg-gradient-to-r from-blue-400 via-emerald-400 via-yellow-400 to-red-500 relative">
+            {% set bmi_pct = [(bmi_result.bmi - 10) / (40 - 10) * 100, 0]|max %}
+            {% set bmi_pct = [bmi_pct, 100]|min %}
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-gray-700 rounded-full shadow" style="left: {{ bmi_pct }}%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400">
+            <span>&lt;18.5</span><span>18.5–24.9</span><span>25–29.9</span><span>≥30</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Reference Table -->
+      <div class="px-6 pb-6">
+        <h4 class="text-sm font-semibold text-gray-600 mb-3">BMI Reference</h4>
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center text-sm">
+            <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span>Underweight</span>
+            <span class="text-gray-500">Below 18.5</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>Normal Weight</span>
+            <span class="text-gray-500">18.5 – 24.9</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>Overweight</span>
+            <span class="text-gray-500">25 – 29.9</span>
+          </div>
+          <div class="flex justify-between items-center text-sm">
+            <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>Obese</span>
+            <span class="text-gray-500">30 and above</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

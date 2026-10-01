@@ -1,0 +1,18 @@
+{
+  "name": "NutriTrack",
+  "short_name": "NutriTrack",
+  "description": "Track meals, plan nutrition, and review your food log.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#065f46",
+  "icons": [
+    {
+      "src": "/static/nutritrack-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

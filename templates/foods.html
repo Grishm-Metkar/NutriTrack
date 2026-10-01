@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Browse Foods - NutriTrack{% endblock %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 py-10">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-4xl font-extrabold text-gray-900">Browse Foods</h1>
+    <p class="text-gray-500 mt-2">Browse your food list or search community product data — nutrition values are per 100g</p>
+  </div>
+
+  <!-- Search & Filter -->
+  <form method="GET" action="/foods" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8 flex flex-col sm:flex-row gap-3">
+    <input type="hidden" name="source" value="{{ source }}" />
+    <div class="flex-1 relative">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input
+        type="text" name="q" value="{{ query }}"
+        placeholder="Search foods (e.g. chicken, rice, avocado)..."
+        class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+      />
+    </div>
+    {% if source == 'local' %}
+    <select name="category" class="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-gray-700">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat['category'] }}" {% if cat['category'] == selected_category %}selected{% endif %}>{{ cat['category'] }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    {% if source == 'openfoodfacts' %}
+    <div class="w-full grid sm:grid-cols-[1fr_auto] gap-3 items-end">
+      <div>
+        <label for="barcode-search" class="block text-xs font-semibold text-gray-500 mb-1">Or look up a barcode</label>
+        <input id="barcode-search" type="text" name="barcode" value="{{ barcode }}" inputmode="numeric" autocomplete="off"
+          placeholder="Enter 8–14 digit barcode"
+          pattern="[0-9]{8,14}" maxlength="14"
+          class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400"/>
+      </div>
+      <button type="button" onclick="startBarcodeScan()" class="rounded-xl border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-semibold px-4 py-2.5">
+        Scan with camera
+      </button>
+      <div class="sm:col-span-2">
+        <video id="barcode-video" class="hidden w-full max-w-md rounded-xl bg-black" autoplay playsinline muted></video>
+        <p id="barcode-status" class="text-xs text-gray-500 mt-2" aria-live="polite">
+          Camera scanning needs browser support and camera permission. You can always enter the barcode manually.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+    <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors">
+      Search
+    </button>
+    {% if query or selected_category %}
+    <a href="/foods" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-5 py-2.5 rounded-xl transition-colors">Clear</a>
+    {% endif %}
+  </form>
+
+  <div class="flex flex-wrap gap-2 mb-7" role="group" aria-label="Food search source">
+    <a href="{{ url_for('foods', q=query) }}"
+       class="px-4 py-2 rounded-full text-sm font-semibold transition-colors {% if source == 'local' %}bg-emerald-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:border-emerald-300{% endif %}">
+      My food list
+    </a>
+    <a href="{{ url_for('foods', q=query, source='openfoodfacts') }}"
+       class="px-4 py-2 rounded-full text-sm font-semibold transition-colors {% if source == 'openfoodfacts' %}bg-emerald-600 text-white{% else %}bg-white text-gray-600 border border-gray-200 hover:border-emerald-300{% endif %}">
+      Open Food Facts
+    </a>
+  </div>
+
+  {% if source == 'openfoodfacts' %}
+  <section aria-labelledby="external-results-heading">
+    <div class="flex items-end justify-between gap-4 mb-5">
+      <div>
+        <h2 id="external-results-heading" class="text-2xl font-bold text-gray-900">Product database results</h2>
+        <p class="text-sm text-gray-500 mt-1">Search results from Open Food Facts. Select a product to verify and add its nutrition values.</p>
+      </div>
+    </div>
+
+    {% if external_error %}
+    <div role="alert" class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      {{ external_error }}
+    </div>
+    {% elif not query and not barcode %}
+    <div class="mb-5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+      Enter a food or product name above to search the community database.
+    </div>
+    {% elif external_foods %}
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for food in external_foods %}
+      <article class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-gray-900 text-lg">{{ food['name'] }}</h3>
+            {% if food['brands'] %}<p class="text-xs text-gray-500 mt-1">{{ food['brands'] }}</p>{% endif %}
+          </div>
+          {% if food['nutrition'] %}
+          <span class="shrink-0 text-right">
+            <strong class="text-xl text-emerald-600">{{ food['nutrition']['calories']|int }}</strong>
+            <span class="block text-xs text-gray-400">kcal / 100g</span>
+          </span>
+          {% endif %}
+        </div>
+
+        {% if food['nutrition'] %}
+        <div class="grid grid-cols-3 gap-2 my-5 text-center">
+          <div class="rounded-lg bg-blue-50 p-2"><strong class="block text-blue-700">{{ food['nutrition']['protein'] }}g</strong><span class="text-xs text-gray-500">Protein</span></div>
+          <div class="rounded-lg bg-orange-50 p-2"><strong class="block text-orange-700">{{ food['nutrition']['carbs'] }}g</strong><span class="text-xs text-gray-500">Carbs</span></div>
+          <div class="rounded-lg bg-yellow-50 p-2"><strong class="block text-yellow-700">{{ food['nutrition']['fats'] }}g</strong><span class="text-xs text-gray-500">Fat</span></div>
+        </div>
+        {% else %}
+        <p class="my-5 text-sm text-gray-500">Nutrition values per 100g are incomplete, so this product cannot be imported yet.</p>
+        {% endif %}
+
+        <div class="mt-auto">
+          {% if food['nutrition'] %}
+            {% if session.get('user_id') %}
+            <form method="POST" action="{{ url_for('import_openfoodfacts_food') }}">
+              <input type="hidden" name="code" value="{{ food['code'] }}" />
+              <input type="hidden" name="q" value="{{ query }}" />
+              <button type="submit" class="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 transition-colors">
+                Verify and add to food list
+              </button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="block w-full text-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2.5 transition-colors">
+              Log in to add this food
+            </a>
+            {% endif %}
+          {% else %}
+          <button type="button" disabled class="w-full rounded-xl bg-gray-100 text-gray-400 font-semibold px-4 py-2.5 cursor-not-allowed">
+            Nutrition data incomplete
+          </button>
+          {% endif %}
+          <a class="block text-center text-xs text-gray-400 hover:text-emerald-700 mt-3"
+             href="https://world.openfoodfacts.org/product/{{ food['code'] }}" target="_blank" rel="noopener noreferrer">
+            View source record
+          </a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 rounded-2xl border border-gray-100 bg-white">
+      <p class="text-gray-700 font-semibold">No matching products found</p>
+      <p class="text-gray-500 text-sm mt-1">Try another product name or check your spelling.</p>
+    </div>
+    {% endif %}
+    <p class="text-xs text-gray-400 mt-5">
+      Data is community-contributed and may be incomplete or inaccurate. Source:
+      <a class="underline hover:text-emerald-700" href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food Facts</a>.
+    </p>
+  </section>
+  {% else %}
+  <!-- Results count -->
+  <p class="text-gray-500 text-sm mb-5">Showing <strong class="text-gray-800">{{ foods|length }}</strong> food{% if foods|length != 1 %}s{% endif %}
+    {% if query %} for "<strong>{{ query }}</strong>"{% endif %}
+    {% if selected_category %} in <strong>{{ selected_category }}</strong>{% endif %}
+  </p>
+
+  <!-- Food Grid -->
+  {% if foods %}
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    {% for food in foods %}
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 card-hover flex flex-col">
+      <div class="flex justify-between items-start mb-2">
+        <span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{{ food['category'] }}</span>
+        <div class="text-right">
+          <span class="text-xl font-extrabold text-emerald-500">{{ food['calories']|int }}</span>
+          <span class="text-xs text-gray-400 ml-0.5">kcal</span>
+        </div>
+      </div>
+      <h3 class="font-bold text-gray-900 text-lg mb-1">{{ food['name'] }}</h3>
+      <p class="text-gray-400 text-xs mb-4 flex-1">{{ food['description'] }}</p>
+
+      <!-- Macro bars -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400 w-14">Protein</span>
+          <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+            <div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ [food['protein']/50*100, 100]|min }}%"></div>
+          </div>
+          <span class="text-xs font-semibold text-blue-600 w-10 text-right">{{ food['protein'] }}g</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400 w-14">Carbs</span>
+          <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+            <div class="bg-orange-400 h-1.5 rounded-full" style="width: {{ [food['carbs']/100*100, 100]|min }}%"></div>
+          </div>
+          <span class="text-xs font-semibold text-orange-500 w-10 text-right">{{ food['carbs'] }}g</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400 w-14">Fats</span>
+          <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+            <div class="bg-yellow-400 h-1.5 rounded-full" style="width: {{ [food['fats']/60*100, 100]|min }}%"></div>
+          </div>
+          <span class="text-xs font-semibold text-yellow-600 w-10 text-right">{{ food['fats'] }}g</span>
+        </div>
+      </div>
+
+      <a href="/calculators?food_id={{ food['id'] }}" class="mt-4 text-center text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+        Calculate servings →
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-20">
+    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <p class="text-gray-500 text-lg font-medium">No foods found</p>
+    <a href="/foods" class="text-emerald-600 hover:underline mt-2 inline-block">Clear search</a>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% if source == 'openfoodfacts' %}
+<script>
+let barcodeStream = null;
+let barcodeScanning = false;
+
+function stopBarcodeScan() {
+  barcodeScanning = false;
+  if (barcodeStream) {
+    barcodeStream.getTracks().forEach((track) => track.stop());
+    barcodeStream = null;
+  }
+  const video = document.getElementById("barcode-video");
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.classList.add("hidden");
+  }
+}
+
+async function startBarcodeScan() {
+  const status = document.getElementById("barcode-status");
+  const video = document.getElementById("barcode-video");
+  const input = document.getElementById("barcode-search");
+  if (!("BarcodeDetector" in window)) {
+    status.textContent = "This browser does not support camera barcode scanning. Enter the barcode manually.";
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    status.textContent = "Camera access is unavailable here. Enter the barcode manually.";
+    return;
+  }
+
+  try {
+    const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
+    barcodeStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false
+    });
+    video.srcObject = barcodeStream;
+    video.classList.remove("hidden");
+    await video.play();
+    barcodeScanning = true;
+    status.textContent = "Point the camera at a product barcode.";
+
+    const scanFrame = async () => {
+      if (!barcodeScanning) return;
+      try {
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          const codes = await detector.detect(video);
+          if (codes.length && codes[0].rawValue) {
+            input.value = codes[0].rawValue;
+            status.textContent = "Barcode found. Looking up the product…";
+            stopBarcodeScan();
+            input.form.requestSubmit();
+            return;
+          }
+        }
+      } catch (_) {
+        stopBarcodeScan();
+        status.textContent = "Could not read this barcode. Enter the digits manually.";
+        return;
+      }
+      requestAnimationFrame(scanFrame);
+    };
+    requestAnimationFrame(scanFrame);
+  } catch (_) {
+    stopBarcodeScan();
+    status.textContent = "Camera permission or barcode scanning is unavailable. Enter the barcode manually.";
+  }
+}
+
+window.addEventListener("pagehide", stopBarcodeScan);
+</script>
+{% endif %}
+{% endblock %}

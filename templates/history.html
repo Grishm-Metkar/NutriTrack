@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Nutrition Trends — NutriTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+  <!-- Header -->
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">Nutrition Trends</h1>
+        <p class="text-gray-500 text-sm mt-0.5">Nutrition activity from {{ start_date }} through {{ end_date }}</p>
+      </div>
+    </div>
+    <a href="/dashboard" class="text-sm text-gray-400 hover:text-emerald-600 transition-colors self-start sm:self-auto">
+      &larr; Back to Dashboard
+    </a>
+  </div>
+
+  <nav class="flex flex-wrap gap-2 mb-6" aria-label="Select history period">
+    {% for option in periods %}
+    <a href="{{ url_for('history', period=option) }}"
+       class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {% if period == option %}bg-emerald-600 text-white{% else %}bg-white border border-gray-200 text-gray-600 hover:border-emerald-300{% endif %}">
+      Last {{ option }} days
+    </a>
+    {% endfor %}
+  </nav>
+
+  <!-- Period summary cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+      <div class="text-2xl font-extrabold text-emerald-500">{{ week_totals.avg_calories }}</div>
+      <div class="text-xs text-gray-400 mt-1 font-medium">Avg kcal / day</div>
+      {% if week_totals.average_change_pct is not none %}
+      <div class="text-xs mt-1 {% if week_totals.average_change_pct > 0 %}text-orange-500{% elif week_totals.average_change_pct < 0 %}text-emerald-600{% else %}text-gray-400{% endif %}">
+        {{ '+' if week_totals.average_change_pct > 0 }}{{ week_totals.average_change_pct }}% vs previous {{ period }} days
+      </div>
+      {% endif %}
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+      <div class="text-2xl font-extrabold text-blue-500">{{ week_totals.protein }}g</div>
+      <div class="text-xs text-gray-400 mt-1 font-medium">Total Protein</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+      <div class="text-2xl font-extrabold text-orange-400">{{ week_totals.carbs }}g</div>
+      <div class="text-xs text-gray-400 mt-1 font-medium">Total Carbs</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+      <div class="text-2xl font-extrabold text-yellow-500">{{ week_totals.fats }}g</div>
+      <div class="text-xs text-gray-400 mt-1 font-medium">Total Fats</div>
+    </div>
+  </div>
+  <p class="text-sm text-gray-500 -mt-5 mb-7">
+    Logged on {{ week_totals.days_with_logs }} of {{ period }} days ·
+    At or under your calorie goal on {{ week_totals.goal_days }} logged days.
+  </p>
+
+  <!-- Calorie trend chart -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
+    <h2 class="text-base font-bold text-gray-800 mb-5">Daily Calories vs Goal — {{ period }}-day view
+      <span class="ml-2 text-sm font-normal text-gray-400">(goal: {{ calorie_goal }} kcal)</span>
+    </h2>
+    <div class="overflow-x-auto">
+    <div class="flex items-end justify-start gap-2 h-36 min-w-max">
+      {% for day in days %}
+        {% set pct = [day.calories / calorie_goal * 100, 100]|min|int if calorie_goal > 0 else 0 %}
+        {% set bar_h = [pct, 5]|max %}
+        <div class="flex flex-col items-center flex-shrink-0 gap-1 w-8">
+          <div class="text-xs font-semibold {% if day.calories > calorie_goal %}text-red-400{% else %}text-gray-500{% endif %}">
+            {% if day.calories > 0 %}{{ day.calories|int }}{% endif %}
+          </div>
+          <div class="w-full flex items-end justify-center" style="height:90px">
+            <div class="w-full rounded-t-lg transition-all
+              {% if day.calories == 0 %}bg-gray-100
+              {% elif day.calories > calorie_goal %}bg-red-400
+              {% elif pct > 80 %}bg-yellow-400
+              {% else %}bg-emerald-500{% endif %}"
+              style="height: {% if day.calories == 0 %}6px{% else %}{{ bar_h }}%{% endif %}">
+            </div>
+          </div>
+          <div class="text-xs text-gray-400 font-medium whitespace-nowrap">
+            {% if day.date == today %}
+              <span class="text-emerald-600 font-bold">Today</span>
+            {% elif period == 7 or loop.index0 % 7 == 0 %}
+              {{ day.date[5:] }}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    </div>
+    <!-- Goal line label -->
+    <div class="mt-3 flex items-center gap-2 text-xs text-gray-400">
+      <div class="w-6 h-0.5 bg-dashed border-t-2 border-dashed border-gray-300"></div>
+      <span>Dashed = calorie goal ({{ calorie_goal }} kcal)</span>
+    </div>
+  </div>
+
+  <!-- Day-by-day details -->
+  <h2 class="text-lg font-bold text-gray-900 mb-4">Daily details</h2>
+  <div class="space-y-4">
+    {% for day in days | reverse %}
+      {% set is_today = day.date == today %}
+      {% set goal_pct = [day.calories / calorie_goal * 100, 100]|min|int if calorie_goal > 0 else 0 %}
+
+      <div class="bg-white rounded-2xl border {% if is_today %}border-emerald-300 shadow-md{% else %}border-gray-100 shadow-sm{% endif %} overflow-hidden">
+
+        <!-- Day header (clickable toggle) -->
+        <button onclick="toggleDay('day-{{ day.date }}')"
+          class="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors">
+          <div class="flex items-center gap-4">
+            <div class="text-base font-bold {% if is_today %}text-emerald-600{% else %}text-gray-800{% endif %}">
+              {% if is_today %}Today — {% endif %}
+              {{ day.date }}
+            </div>
+            {% if day.logs|length == 0 %}
+              <span class="text-xs text-gray-400 font-medium">No meals logged</span>
+            {% else %}
+              <span class="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+                {{ day.logs|length }} item{{ 's' if day.logs|length != 1 }}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="flex items-center gap-6">
+            <!-- Macro pills -->
+            {% if day.calories > 0 %}
+              <div class="hidden sm:flex items-center gap-3 text-xs font-semibold">
+                <span class="{% if day.calories > calorie_goal %}text-red-500{% else %}text-emerald-600{% endif %}">
+                  {{ day.calories|int }} kcal
+                </span>
+                <span class="text-blue-500">P {{ day.protein|int }}g</span>
+                <span class="text-orange-400">C {{ day.carbs|int }}g</span>
+                <span class="text-yellow-500">F {{ day.fats|int }}g</span>
+              </div>
+            {% endif %}
+            <svg class="w-4 h-4 text-gray-400 transition-transform" id="chevron-day-{{ day.date }}"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </button>
+
+        <!-- Calorie progress bar (always visible) -->
+        {% if day.calories > 0 %}
+          <div class="px-6 pb-2">
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-1.5 rounded-full {% if day.calories > calorie_goal %}bg-red-400{% elif goal_pct > 80 %}bg-yellow-400{% else %}bg-emerald-500{% endif %}"
+                style="width: {{ goal_pct }}%"></div>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Expandable meal list (today open by default) -->
+        <div id="day-{{ day.date }}" class="{% if not is_today %}hidden{% endif %} border-t border-gray-100">
+          {% if day.logs|length == 0 %}
+            <p class="px-6 py-5 text-sm text-gray-400 text-center">Nothing logged this day.</p>
+          {% else %}
+            <div class="divide-y divide-gray-50">
+              {% for entry in day.logs %}
+                <div class="px-6 py-3 flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-semibold text-gray-800">{{ entry.name }}</div>
+                    <div class="text-xs text-gray-400">{{ entry.grams }}g &middot;
+                      <span class="capitalize">{{ entry.meal_type }}</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 text-xs font-semibold text-right">
+                    <span class="text-emerald-600">{{ entry.calories }} kcal</span>
+                    <span class="text-blue-500 hidden sm:inline">P {{ entry.protein }}g</span>
+                    <span class="text-orange-400 hidden sm:inline">C {{ entry.carbs }}g</span>
+                    <span class="text-yellow-500 hidden sm:inline">F {{ entry.fats }}g</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <!-- Day total row -->
+            <div class="px-6 py-3 bg-gray-50 flex items-center justify-between text-sm font-bold text-gray-700 border-t border-gray-100">
+              <span>Daily Total</span>
+              <div class="flex gap-4 text-xs font-bold">
+                <span class="{% if day.calories > calorie_goal %}text-red-500{% else %}text-emerald-600{% endif %}">{{ day.calories }} kcal</span>
+                <span class="text-blue-500 hidden sm:inline">P {{ day.protein }}g</span>
+                <span class="text-orange-400 hidden sm:inline">C {{ day.carbs }}g</span>
+                <span class="text-yellow-500 hidden sm:inline">F {{ day.fats }}g</span>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+function toggleDay(id) {
+  const el = document.getElementById(id);
+  const chevron = document.getElementById('chevron-' + id);
+  el.classList.toggle('hidden');
+  chevron.classList.toggle('rotate-180');
+}
+</script>
+{% endblock %}
